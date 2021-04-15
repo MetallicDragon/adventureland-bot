@@ -1,12 +1,9 @@
-// strategies
-load_code("character_utils");
-load_code("tasks")
+import * as char_utils from "./character_utils.js";
+import * as Tasks from "./tasks.js";
 
-var Strategies = {};
-
-Strategies.BaseStrategy = class BaseStrategy {
+export class BaseStrategy {
 	child_strategies = {
-		"idle": Strategies.IdleStrategy,
+		"idle": IdleStrategy,
 	};
 	tasks = [
 		this.task({action: () => this.child_strategy("idle")})
@@ -48,7 +45,7 @@ Strategies.BaseStrategy = class BaseStrategy {
 		if (opts.type) {
 			return new Tasks[opts.type]({context: this});
 		} else {
-			return new Task(opts)
+			return new Tasks.BaseTask(opts)
 		}
 	}
 
@@ -71,7 +68,7 @@ Strategies.BaseStrategy = class BaseStrategy {
 	supplies_needed() {
 		let supplies_needed = [];
 		for (let p_type of this.manager.options.potions_to_restock) {
-			let need_more = this.character.item_count(p_type) < this.manager.options.potion_restock_threshold;
+			let need_more = char_utils.item_count(this.character, p_type) < this.manager.options.potion_restock_threshold;
 			if (need_more) {
 				supplies_needed.push(p_type);
 			}
@@ -85,7 +82,7 @@ Strategies.BaseStrategy = class BaseStrategy {
 	}
 
 	heal_if_needed() {
-		if (this.character.low_health() || this.character.low_mp()) {
+		if (char_utils.low_health(this.character) || char_utils.low_mp(this.character)) {
 			use_hp_or_mp();	
 		} else if (!is_on_cooldown("regen_hp") && this.character.hp < this.character.max_hp) {
 			use_skill("regen_hp");
@@ -123,7 +120,7 @@ Strategies.BaseStrategy = class BaseStrategy {
 	}
 }
 
-Strategies.Respawn = class Respawn extends Strategies.BaseStrategy {
+export class Respawn extends BaseStrategy {
 	tasks = [
 		this.task({
 			condition: () => this.character.rip,
@@ -136,13 +133,13 @@ Strategies.Respawn = class Respawn extends Strategies.BaseStrategy {
 	]
 }
 
-Strategies.IdleStrategy = class IdleStrategy extends Strategies.BaseStrategy {
+export class IdleStrategy extends BaseStrategy {
 	tasks = [
 		this.task({type: "DoNothing"})
 	]
 }
 
-Strategies.SmartMove = class SmartMove extends Strategies.BaseStrategy {
+export class SmartMove extends BaseStrategy {
 	tasks = [
 		this.task({
 			condition: () => this.moving,
@@ -158,12 +155,12 @@ Strategies.SmartMove = class SmartMove extends Strategies.BaseStrategy {
 	}
 }
 
-Strategies.GoToMonstersToGrind = class GoToMonstersToGrind extends Strategies.BaseStrategy {
+export class GoToMonstersToGrind extends BaseStrategy {
 	next_spawn_i = 0;
 	child_strategies = {
-		"dead": Strategies.Respawn,
-		"monsters_found": Strategies.GrindNearbyMonsters,
-		"move": Strategies.SmartMove,
+		"dead": Respawn,
+		"monsters_found": GrindNearbyMonsters,
+		"move": SmartMove,
 	}
 	tasks = [
 		this.task({
@@ -209,10 +206,10 @@ Strategies.GoToMonstersToGrind = class GoToMonstersToGrind extends Strategies.Ba
 	}
 }
 
-Strategies.GrindNearbyMonsters = class GrindNearbyMonsters extends Strategies.BaseStrategy {
+export class GrindNearbyMonsters extends BaseStrategy {
 	child_strategies = {
-		"supplies_needed": Strategies.Resupply,
-		"have_target": Strategies.FightMonster,
+		"supplies_needed": Resupply,
+		"have_target": FightMonster,
 	}
 	tasks = [
 		this.task({type: "FailIfDead"}),
@@ -245,7 +242,7 @@ Strategies.GrindNearbyMonsters = class GrindNearbyMonsters extends Strategies.Ba
 	};
 }
 
-Strategies.FightMonster = class FightMonster extends Strategies.BaseStrategy {
+export class FightMonster extends BaseStrategy {
 	tasks = [
 		this.task({type: "FailIfDead"}),
 		this.task({
@@ -294,7 +291,7 @@ Strategies.FightMonster = class FightMonster extends Strategies.BaseStrategy {
 	};
 }
 
-Strategies.Resupply = class Resupply extends Strategies.BaseStrategy {
+export class Resupply extends BaseStrategy {
 	moving_state = "";
 	tasks = [
 		this.task({

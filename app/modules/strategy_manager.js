@@ -1,7 +1,7 @@
 // strategy_manager
-load_code("strategies");
+import * as Strategies from "./strategies.js";
 
-class StrategyManager {
+export default class StrategyManager {
 	default_options = {
 		monster_min_xp: 999999999,
 		monster_max_attack: 120,

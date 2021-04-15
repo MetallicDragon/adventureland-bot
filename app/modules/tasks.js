@@ -1,7 +1,4 @@
-// tasks
-var Tasks = {};
-
-class Task {
+export class BaseTask {
 	constructor(opts = {}) {
 		this.action = opts.action;
 		this.condition = opts.condition;
@@ -22,7 +19,7 @@ class Task {
 	}
 }
 
-Tasks.FailIfDead = class FailIfDead extends Task {
+export class FailIfDead extends BaseTask {
 	condition = function() { return this.character.rip }.bind(this.context)
 	action = function() {
 		game_log("Died!");
@@ -30,10 +27,10 @@ Tasks.FailIfDead = class FailIfDead extends Task {
 	}.bind(this.context);
 }
 
-Tasks.DoNothing = class DoNothing extends Task {
+export class DoNothing extends BaseTask {
 	action = function() { return this.running() }.bind(this.context);
 }
 
-Tasks.Fail = class Fail extends Task {
+export class Fail extends BaseTask {
 	action = function() { return this.fail()}.bind(this.context);
 }
