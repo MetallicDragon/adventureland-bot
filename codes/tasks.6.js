@@ -23,17 +23,17 @@ class Task {
 }
 
 Tasks.FailIfDead = class FailIfDead extends Task {
-	condition = () => this.context.character.rip
-	action = () => {
+	condition = function() { return this.character.rip }.bind(this.context)
+	action = function() {
 		game_log("Died!");
-		return this.context.fail();
-	}
+		return this.fail();
+	}.bind(this.context);
 }
 
 Tasks.DoNothing = class DoNothing extends Task {
-	action = () => this.context.running();
+	action = function() { return this.running() }.bind(this.context);
 }
 
 Tasks.Fail = class Fail extends Task {
-	action = () => this.context.fail();
+	action = function() { return this.fail()}.bind(this.context);
 }
