@@ -1,4 +1,2 @@
-codes/test.4.js
-codes/warrior.1.js
-codes/mage.7.js
 node_modules/*
+app/test.js

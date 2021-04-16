@@ -1,9 +1,10 @@
+game_log("Test file loaded!")
 // test
-try {
-	throw new Error("Test Error");
-} catch (e) {
-	show_json(e.stack);
-}
+// try {
+// 	throw new Error("Test Error");
+// } catch (e) {
+// 	show_json(e.stack);
+// }
 
 // import("/codes/modules/strategy_manager.js");
 
