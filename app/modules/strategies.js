@@ -1,4 +1,5 @@
 import * as char_utils from "./character_utils.js";
+import * as map_utils from "./map_utils.js";
 import * as Tasks from "./tasks.js";
 
 export class BaseStrategy {
@@ -30,7 +31,7 @@ export class BaseStrategy {
 	};
 
 	running() { 
-		return {status: "ok"};
+		return {status: "running", next_strategy: this};
 	};
 
 	fail() {
@@ -62,7 +63,7 @@ export class BaseStrategy {
 
 	child_strategy(reason, options) {
 		let next_strategy = new this.child_strategies[reason](this.character, this, this.manager, options);
-		return {status: "done", next_strategy: next_strategy};
+		return {status: "child_strategy", next_strategy: next_strategy};
 	}
 
 	supplies_needed() {
@@ -161,11 +162,25 @@ export class GoToMonstersToGrind extends BaseStrategy {
 		"dead": Respawn,
 		"monsters_found": GrindNearbyMonsters,
 		"move": SmartMove,
+		"inventory_almost_full": ManageInventory,
+		"change_map": MoveToAndGoThroughDoor
 	}
 	tasks = [
 		this.task({
+			condition: () => char_utils.free_inventory_spaces(this.character) < 4,
+			action: () => this.child_strategy("inventory_almost_full"),
+			log: "Inventory almost full, going to bank."
+		}),
+		this.task({
 			condition: () => this.character.rip,
 			action: () => this.child_strategy("dead")
+		}),
+		this.task({
+			condition: () => this.character.map != "main",
+			action: () => {
+				let door = map_utils.door_from_name(get_map(), "main");
+				return this.child_strategy("change_map", {door: door});
+			}
 		}),
 		this.task({
 			condition: () => this.get_closest_entity(this.grindable_monster),
@@ -333,5 +348,78 @@ export class Resupply extends BaseStrategy {
 
 	moving_fail() {
 		this.moving_success();
+	}
+}
+
+export class ManageInventory extends BaseStrategy {
+	child_strategies = {
+		"not_in_bank": MoveToAndGoThroughDoor,
+	}
+	tasks = [
+		this.task({
+			condition: () => this.character.map == "main",
+			action: () => this.go_to_bank()
+		}),
+		this.task({
+			action: () => this.deposit_everything_except_potions()
+		})
+	]
+
+	go_to_bank() {
+		let door = map_utils.door_from_name(get_map(), "bank");
+		return this.child_strategy("not_in_bank", {door: door});
+	}
+
+	deposit_everything_except_potions() {
+		let potions = ["hpot0", "mpot0", "hpot1", "mpot1", "hpotx", "mpotx"]
+		let item_slots_to_deposit = [];
+		for (i in this.character.items) {
+			let item = this.character.items[i]
+			let should_deposit_item = item && !potions.includes(item.name);
+			if (should_deposit_item) {
+				item_slots_to_deposit.push(i);
+			}
+		}
+		for (let i_slot of item_slots_to_deposit) {
+			bank_store(i_slot);
+		}
+	}
+}
+
+export class MoveToAndGoThroughDoor extends BaseStrategy {
+	child_strategies = {
+		"move": SmartMove,
+	}
+	went_through_door = false;
+	tasks = [
+		this.task({
+			condition: () => is_transporting(this.character),
+			action: () => this.running()
+		}),
+		this.task({
+			condition: () => this.went_through_door,
+			action: () => this.done()
+		}),
+		this.task({
+			condition: () => !this.near_door(),
+			action: () => this.go_to_door(),
+		}),
+		this.task({
+			action: () => this.go_through_door()
+		})
+	]
+
+	go_to_door() {
+		return this.child_strategy("move", {x: this.options.door.x, y: this.options.door.y});
+	}
+
+	go_through_door() {
+		this.went_through_door = true;
+		transport(this.options.door.name, this.options.door.transport_id);
+		return this.running();
+	}
+
+	near_door() {
+		return distance(this.character, this.options.door) <= 100;
 	}
 }

@@ -56,7 +56,7 @@ export default class StrategyManager {
 
 		if (last_result.status != "running") {
 			this.current_strategy.on_start();
-			this._execute_until_strategy_running(depth + 1);
+			//this._execute_until_strategy_running(depth + 1);
 		}
 	}
 

@@ -1,6 +1,6 @@
 import StrategyManager from "./modules/strategy_manager.js"
 
-strategy_manager = new StrategyManager(character, {
+let strategy_manager = new StrategyManager(character, {
 	monster_min_xp: 900,
 	//initial_strategy: Strategies.BaseStrategy,
 	whitelisted_spawns: ["snake"],
