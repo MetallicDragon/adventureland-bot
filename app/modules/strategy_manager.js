@@ -5,7 +5,7 @@ export default class StrategyManager {
 	default_options = {
 		monster_min_xp: 999999999,
 		monster_max_attack: 120,
-		initial_strategy: Strategies.GoToMonstersToGrind,
+		initial_strategy: "GoToMonstersToGrind",
 		whitelisted_spawns: [
 			"bee",
 			"croc",
@@ -27,33 +27,49 @@ export default class StrategyManager {
 
 
 		this.current_strategy = this.initial_strategy();
-		this.current_strategy.on_start();
+		try {
+			this.current_strategy.on_start();
+		} catch (e) {
+			this.handle_error(e);
+		}
 	}
 
 	execute() {
 		try {
-			var last_result = this.current_strategy.execute();
-
-			if (last_result.status == "fail" || last_result.status == "done") {
-				this.current_strategy = last_result.next_strategy;
-				if (!this.current_strategy) {
-					game_log("Root Strategy has failed! Defaulting to IdleStrategy");
-					this.current_strategy = this.fallback_strategy();
-				}
-				this.current_strategy.on_start();
-				this.execute();
-			}
+			this._execute_until_strategy_running(0);
 		} catch (e) {
-			game_log("Caught error while executing strategy!");
-			show_json(e.stack);
-			this.current_strategy = this.fallback_strategy();
-			this.current_strategy.on_start();
-			throw e;
+			this.handle_error(e)
 		}
 	};
 
+	_execute_until_strategy_running(depth) {
+		if (depth > 20) {
+			throw new Error("StrategyManager recursive execution limit exceeded (loop in strategy logic?)");
+		}
+
+		var last_result = this.current_strategy.execute();
+		this.current_strategy = last_result.next_strategy;
+		if (!this.current_strategy) {
+			game_log("Root Strategy has failed! Defaulting to IdleStrategy");
+			this.current_strategy = this.fallback_strategy();
+		}
+
+		if (last_result.status != "running") {
+			this.current_strategy.on_start();
+			this._execute_until_strategy_running(depth + 1);
+		}
+	}
+
+	handle_error(e) {
+		game_log("Caught error while executing strategy!");
+		show_json(e.stack);
+		this.current_strategy = this.fallback_strategy();
+		this.current_strategy.on_start();
+		throw e;
+	}
+
 	initial_strategy() {
-		return new this.options.initial_strategy(this.character, null, this);
+		return new Strategies[this.options.initial_strategy](this.character, null, this);
 	};
 
 	fallback_strategy() {
